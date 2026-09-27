@@ -1,26 +1,15 @@
 {
   "name": "school-management-system",
   "version": "1.0.0",
-  "description": "A fully functional school management system built with Node.js, Express and SQLite",
+  "description": "Fully functional school management system",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
   },
-  "keywords": [
-    "school",
-    "management",
-    "students",
-    "teachers",
-    "courses",
-    "grades",
-    "attendance",
-    "fees"
-  ],
-  "author": "GitHub Copilot",
-  "license": "MIT",
   "dependencies": {
     "express": "^4.19.2",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "ua-parser-js": "^1.0.39"
   }
 }
