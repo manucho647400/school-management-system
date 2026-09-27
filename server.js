@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const crypto = require('crypto');
+const UAParser = require('ua-parser-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +25,22 @@ function openDb() {
         username TEXT UNIQUE,
         password TEXT,
         role TEXT DEFAULT 'admin'
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        token TEXT UNIQUE,
+        device_type TEXT,
+        device_name TEXT,
+        browser TEXT,
+        ip_address TEXT,
+        login_time TEXT,
+        last_activity TEXT,
+        is_active INTEGER DEFAULT 1,
+        FOREIGN KEY (user_id) REFERENCES users(id)
       )
     `);
 
@@ -219,16 +236,46 @@ function openDb() {
 
 const db = openDb();
 
+// Detect device type from user agent
+function getDeviceInfo(userAgent) {
+  const parser = new UAParser(userAgent);
+  const result = parser.getResult();
+  
+  const deviceType = result.device.type || 'desktop';
+  const deviceName = `${result.browser.name || 'Unknown'} on ${result.os.name || 'Unknown OS'}`;
+  const browser = `${result.browser.name} ${result.browser.version || ''}`.trim();
+  
+  return { deviceType, deviceName, browser };
+}
+
+function getClientIP(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress || 'unknown';
+}
+
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : null;
 
-  if (!token || !authTokens.has(token)) {
+  if (!token) {
     return res.status(401).json({ error: 'Unauthorized. Please log in.' });
   }
 
-  req.user = authTokens.get(token);
-  next();
+  db.get(
+    'SELECT s.*, u.username, u.role FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND s.is_active = 1',
+    [token],
+    (err, session) => {
+      if (err || !session) {
+        return res.status(401).json({ error: 'Session expired or invalid. Please log in again.' });
+      }
+
+      // Update last activity
+      db.run('UPDATE sessions SET last_activity = ? WHERE token = ?', [new Date().toISOString(), token]);
+
+      req.user = { id: session.user_id, username: session.username, role: session.role };
+      req.session = session;
+      next();
+    }
+  );
 }
 
 app.get('/api/health', (_, res) => {
@@ -252,21 +299,38 @@ app.post('/api/login', (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    authTokens.set(token, { id: user.id, username: user.username, role: user.role });
+    const userAgent = req.headers['user-agent'] || '';
+    const { deviceType, deviceName, browser } = getDeviceInfo(userAgent);
+    const ipAddress = getClientIP(req);
+    const now = new Date().toISOString();
 
-    res.json({
-      token,
-      user: { id: user.id, username: user.username, role: user.role }
-    });
+    db.run(
+      `INSERT INTO sessions (user_id, token, device_type, device_name, browser, ip_address, login_time, last_activity, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [user.id, token, deviceType, deviceName, browser, ipAddress, now, now],
+      (insertErr) => {
+        if (insertErr) {
+          return res.status(500).json({ error: 'Failed to create session.' });
+        }
+
+        authTokens.set(token, { id: user.id, username: user.username, role: user.role });
+
+        res.json({
+          token,
+          user: { id: user.id, username: user.username, role: user.role },
+          device: { type: deviceType, name: deviceName }
+        });
+      }
+    );
   });
 });
 
 app.post('/api/logout', requireAuth, (req, res) => {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : null;
+  const token = req.headers.authorization?.replace('Bearer ', '');
 
   if (token) {
     authTokens.delete(token);
+    db.run('UPDATE sessions SET is_active = 0 WHERE token = ?', [token]);
   }
 
   res.json({ success: true, message: 'Logged out successfully.' });
@@ -274,6 +338,47 @@ app.post('/api/logout', requireAuth, (req, res) => {
 
 app.get('/api/me', requireAuth, (req, res) => {
   res.json({ user: req.user });
+});
+
+// Get all active sessions for the current user
+app.get('/api/sessions', requireAuth, (req, res) => {
+  db.all(
+    `SELECT id, device_type, device_name, browser, ip_address, login_time, last_activity, is_active
+     FROM sessions WHERE user_id = ? ORDER BY login_time DESC`,
+    [req.user.id],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Unable to fetch sessions.' });
+      res.json(rows);
+    }
+  );
+});
+
+// Logout from a specific device
+app.post('/api/sessions/:sessionId/logout', requireAuth, (req, res) => {
+  db.run(
+    'UPDATE sessions SET is_active = 0 WHERE id = ? AND user_id = ?',
+    [req.params.sessionId, req.user.id],
+    function(err) {
+      if (err) return res.status(500).json({ error: 'Unable to logout from device.' });
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Session not found.' });
+      }
+      res.json({ success: true, message: 'Device logged out successfully.' });
+    }
+  );
+});
+
+// Logout from all devices
+app.post('/api/logout-all-devices', requireAuth, (req, res) => {
+  db.run(
+    'UPDATE sessions SET is_active = 0 WHERE user_id = ?',
+    [req.user.id],
+    (err) => {
+      if (err) return res.status(500).json({ error: 'Unable to logout from all devices.' });
+      authTokens.clear();
+      res.json({ success: true, message: 'Logged out from all devices.' });
+    }
+  );
 });
 
 app.get('/api/overview', requireAuth, (_, res) => {
