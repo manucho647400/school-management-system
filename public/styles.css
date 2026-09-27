@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>School Management System</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="loginView" class="auth-view">
+      <div class="login-card">
+        <div class="brand-block">
+          <h1>SchoolTrack</h1>
+          <p>Academic operations dashboard</p>
+        </div>
+
+        <form id="loginForm">
+          <div class="field-group">
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text" value="admin" required />
+          </div>
+
+          <div class="field-group">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" value="admin123" required />
+          </div>
+
+          <button type="submit" class="primary-btn">Log in</button>
+          <p id="loginMessage" class="message"></p>
+        </form>
+      </div>
+    </div>
+
+    <div id="appView" class="hidden">
+      <header class="topbar">
+        <div>
+          <h2>School Management System</h2>
+        </div>
+        <div class="user-area">
+          <span id="welcomeText">Welcome</span>
+          <button id="logoutBtn" class="secondary-btn">Log out</button>
+        </div>
+      </header>
+
+      <nav class="nav-tabs">
+        <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="nav-btn" data-tab="students">Students</button>
+        <button class="nav-btn" data-tab="teachers">Teachers</button>
+        <button class="nav-btn" data-tab="courses">Courses</button>
+        <button class="nav-btn" data-tab="grades">Grades</button>
+        <button class="nav-btn" data-tab="attendance">Attendance</button>
+        <button class="nav-btn" data-tab="fees">Fees</button>
+      </nav>
+
+      <main class="content">
+        <section id="dashboard" class="tab-panel active">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span>Total students</span>
+              <strong id="totalStudents">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Teachers</span>
+              <strong id="totalTeachers">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Courses</span>
+              <strong id="totalCourses">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Avg score</span>
+              <strong id="averageScore">0%</strong>
+            </div>
+            <div class="stat-card">
+              <span>Fees collected</span>
+              <strong id="collectedFees">KSh 0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Attendance rate</span>
+              <strong id="attendanceRate">0%</strong>
+            </div>
+          </div>
+        </section>
+
+        <section id="students" class="tab-panel">
+          <div class="panel-header">
+            <h3>Students</h3>
+          </div>
+          <form id="studentForm" class="entry-form">
+            <input type="hidden" id="studentId" />
+            <div class="form-grid">
+              <input name="name" placeholder="Student name" required />
+              <input name="email" type="email" placeholder="Email" required />
+              <input name="phone" placeholder="Phone" />
+              <input name="date_of_birth" type="date" placeholder="Date of birth" />
+              <input name="enrollment_date" type="date" placeholder="Enrollment date" />
+              <select name="status">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <input name="guardian_name" placeholder="Guardian name" />
+              <input name="address" placeholder="Address" />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Save student</button>
+              <button type="button" id="cancelStudentEdit" class="secondary-btn hidden">Cancel</button>
+            </div>
+          </form>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Guardian</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="studentsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="teachers" class="tab-panel">
+          <div class="panel-header">
+            <h3>Teachers</h3>
+          </div>
+          <form id="teacherForm" class="entry-form">
+            <input type="hidden" id="teacherId" />
+            <div class="form-grid">
+              <input name="name" placeholder="Teacher name" required />
+              <input name="email" type="email" placeholder="Email" required />
+              <input name="phone" placeholder="Phone" />
+              <input name="subject" placeholder="Subject" required />
+              <input name="hire_date" type="date" placeholder="Hire date" />
+              <select name="status">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Save teacher</button>
+              <button type="button" id="cancelTeacherEdit" class="secondary-btn hidden">Cancel</button>
+            </div>
+          </form>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Subject</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="teachersTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="courses" class="tab-panel">
+          <div class="panel-header">
+            <h3>Courses</h3>
+          </div>
+          <form id="courseForm" class="entry-form">
+            <input type="hidden" id="courseId" />
+            <div class="form-grid">
+              <input name="course_name" placeholder="Course name" required />
+              <input name="code" placeholder="Code" required />
+              <input name="credits" type="number" placeholder="Credits" min="1" />
+              <select id="teacherSelect" name="teacher_id"></select>
+              <input name="room_number" placeholder="Room number" />
+              <input name="schedule" placeholder="Schedule" />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Save course</button>
+              <button type="button" id="cancelCourseEdit" class="secondary-btn hidden">Cancel</button>
+            </div>
+          </form>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Course</th>
+                  <th>Code</th>
+                  <th>Teacher</th>
+                  <th>Credits</th>
+                  <th>Schedule</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="coursesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="grades" class="tab-panel">
+          <div class="panel-header">
+            <h3>Grades</h3>
+          </div>
+          <form id="gradeForm" class="entry-form">
+            <div class="form-grid">
+              <select id="gradeStudentSelect" name="student_id"></select>
+              <select id="gradeCourseSelect" name="course_id"></select>
+              <input name="exam" placeholder="Exam / assessment" required />
+              <input name="score" type="number" min="0" max="100" placeholder="Score" required />
+              <input name="remarks" placeholder="Remarks" />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Add grade</button>
+            </div>
+          </form>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Course</th>
+                  <th>Exam</th>
+                  <th>Score</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="gradesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="attendance" class="tab-panel">
+          <div class="panel-header">
+            <h3>Attendance</h3>
+          </div>
+          <form id="attendanceForm" class="entry-form">
+            <div class="form-grid">
+              <select id="attendanceStudentSelect" name="student_id"></select>
+              <select id="attendanceCourseSelect" name="course_id"></select>
+              <input name="date" type="date" required />
+              <select name="present">
+                <option value="1">Present</option>
+                <option value="0">Absent</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Record attendance</button>
+            </div>
+          </form>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Course</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="fees" class="tab-panel">
+          <div class="panel-header">
+            <h3>Fee management</h3>
+          </div>
+          <form id="feeForm" class="entry-form">
+            <div class="form-grid">
+              <select id="feeStudentSelect" name="student_id"></select>
+              <input name="amount" type="number" min="0" placeholder="Amount" required />
+              <input name="due_date" type="date" required />
+              <select name="status">
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+              </select>
+              <input name="notes" placeholder="Notes" />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary-btn">Save fee record</button>
+            </div>
+          </form>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Amount</th>
+                  <th>Due date</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="feesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
